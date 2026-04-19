@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es-HN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recetas - Sistema de Cocina</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <%- include('partials/sidebar') %>
+    
+    <main class="main-content">
+        <header class="page-header">
+            <h1>🍽️ Gestión de Recetas</h1>
+            <p class="subtitle">Creá recetas y calculá costos automáticamente</p>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('crear')">Crear Receta</button>
+            <button class="tab-btn" onclick="switchTab('lista')">Ver Recetas</button>
+        </div>
+        
+        <div id="tab-crear" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Nueva Receta</h3>
+                </div>
+                <div class="card-body">
+                    <form id="formReceta" onsubmit="crearReceta(event)">
+                        <div class="form-group">
+                            <label>Nombre del Plato</label>
+                            <input type="text" id="nombrePlato" required placeholder="Ej: SAMBOS RELLENOS">
+                        </div>
+                        
+                        <h4 style="margin: 1.5rem 0 1rem;">Ingredientes</h4>
+                        <div id="ingredientesReceta"></div>
+                        <button type="button" class="btn btn-sm" onclick="agregarIngrediente()">
+                            ➕ Agregar Ingrediente
+                        </button>
+                        
+                        <hr style="margin: 2rem 0;">
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Precio de Venta Deseado (L.)</label>
+                                <input type="number" id="precioVenta" step="0.01" required placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Margen Objetivo (%)</label>
+                                <input type="number" id="margenObjetivo" step="0.01" value="70" placeholder="70">
+                            </div>
+                        </div>
+                        
+                        <div style="background: var(--light); padding: 1.5rem; border-radius: 8px; margin: 1rem 0;">
+                            <h3>Resumen de Costos</h3>
+                            <p>Costo Total del Plato: <strong id="costoTotalPlato">L. 0.00</strong></p>
+                            <p>Precio de Venta: <strong id="precioVentaDisplay">L. 0.00</strong></p>
+                            <p>Utilidad: <strong id="utilidadDisplay">L. 0.00</strong></p>
+                            <p>Margen: <strong id="margenDisplay">0%</strong></p>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-block">💾 Guardar Receta</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div id="tab-lista" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Recetas Guardadas</h3>
+                </div>
+                <div class="card-body">
+                    <% if (recetas && recetas.length > 0) { %>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Plato</th>
+                                    <th>Costo</th>
+                                    <th>Precio Venta</th>
+                                    <th>Utilidad</th>
+                                    <th>Margen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% recetas.forEach(r => { %>
+                                <tr>
+                                    <td><strong><%= r.plato %></strong></td>
+                                    <td>L. <%= r.costoTotalPlato.toFixed(2) %></td>
+                                    <td>L. <%= r.precioVenta.toFixed(2) %></td>
+                                    <td>L. <%= r.valorUtilidad.toFixed(2) %></td>
+                                    <td><%= (r.margenUtilidad * 100).toFixed(1) %>%</td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    <% } else { %>
+                        <p class="text-center text-muted">No hay recetas creadas aún</p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="/js/main.js"></script>
+    <script>
+        let inventarioDisponible = [];
+        
+        async function cargarInventario() {
+            const response = await fetch('/api/inventario');
+            inventarioDisponible = await response.json();
+            agregarIngrediente();
+        }
+        
+        function agregarIngrediente() {
+            const container = document.getElementById('ingredientesReceta');
+            const html = `
+                <div class="ingrediente-item" style="background: var(--light); padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <div class="form-row" style="grid-template-columns: 2fr 1fr auto;">
+                        <select class="ing-select" required onchange="actualizarCostos()">
+                            <option value="">Seleccionar ingrediente...</option>
+                            ${inventarioDisponible.map(i => 
+                                `<option value="${i.codigo}" data-costo="${i.costoUnitario}" data-nombre="${i.ingrediente}">
+                                    ${i.ingrediente} (L. ${i.costoUnitario.toFixed(2)}/${i.unidad})
+                                </option>`
+                            ).join('')}
+                        </select>
+                        <input type="number" class="ing-cantidad" step="0.01" min="0.01" placeholder="Cantidad" required onchange="actualizarCostos()">
+                        <button type="button" class="btn btn-sm" onclick="this.parentElement.parentElement.remove(); actualizarCostos();" 
+                                style="background: #ff4b4b; color: white;">🗑️</button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function actualizarCostos() {
+            let costoTotal = 0;
+            document.querySelectorAll('.ingrediente-item').forEach(item => {
+                const select = item.querySelector('.ing-select');
+                const cantidad = parseFloat(item.querySelector('.ing-cantidad').value) || 0;
+                const costo = parseFloat(select.options[select.selectedIndex]?.dataset.costo || 0);
+                costoTotal += cantidad * costo;
+            });
+            
+            const precioVenta = parseFloat(document.getElementById('precioVenta').value) || 0;
+            const utilidad = precioVenta - costoTotal;
+            const margen = precioVenta > 0 ? (utilidad / precioVenta) * 100 : 0;
+            
+            document.getElementById('costoTotalPlato').textContent = 'L. ' + costoTotal.toFixed(2);
+            document.getElementById('precioVentaDisplay').textContent = 'L. ' + precioVenta.toFixed(2);
+            document.getElementById('utilidadDisplay').textContent = 'L. ' + utilidad.toFixed(2);
+            document.getElementById('margenDisplay').textContent = margen.toFixed(1) + '%';
+        }
+        
+        async function crearReceta(event) {
+            event.preventDefault();
+            
+            const plato = document.getElementById('nombrePlato').value;
+            const precioVenta = document.getElementById('precioVenta').value;
+            const margenObjetivo = document.getElementById('margenObjetivo').value;
+            
+            const ingredientes = [];
+            document.querySelectorAll('.ingrediente-item').forEach(item => {
+                const select = item.querySelector('.ing-select');
+                const opt = select.options[select.selectedIndex];
+                if (opt.value) {
+                    ingredientes.push({
+                        codigo: opt.value,
+                        nombre: opt.dataset.nombre,
+                        cantidad: item.querySelector('.ing-cantidad').value,
+                        costoUnitario: opt.dataset.costo
+                    });
+                }
+            });
+            
+            if (ingredientes.length === 0) {
+                alert('Debés agregar al menos un ingrediente');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/recetas/crear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plato, ingredientes, precioVenta, margenObjetivo })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('Receta creada exitosamente', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } catch (error) {
+                showNotification('Error al crear receta', 'error');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarInventario();
+            document.getElementById('precioVenta').addEventListener('input', actualizarCostos);
+        });
+    </script>
+</body>
+</html>

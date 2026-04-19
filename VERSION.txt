@@ -1,0 +1,36 @@
+═══════════════════════════════════════════════════════════
+  SISTEMA DE CONTROL DE COCINA - VERSIÓN PROFESIONAL
+═══════════════════════════════════════════════════════════
+
+Versión: 2.0.0
+Fecha: Abril 2026
+Desarrollado para: Instituto Tecnológico Santo Tomás
+
+CARACTERÍSTICAS:
+✅ Sistema completo de gestión de cocina
+✅ Control de inventario automatizado
+✅ Recetas con cálculo de costos
+✅ Producción con trazabilidad
+✅ Reportes y análisis
+✅ Gestión de usuarios con roles
+✅ Auditoría completa
+
+TECNOLOGÍAS:
+- Node.js + Express
+- Base de datos JSON
+- Autenticación con bcrypt
+- Templates EJS
+- CSS moderno responsive
+
+CREDENCIALES INICIALES:
+Usuario: admin
+Contraseña: admin123
+
+⚠️ IMPORTANTE: Cambiar la contraseña después del primer acceso
+
+SOPORTE:
+Profesor: Docente de Informática
+Instituto Tecnológico Santo Tomás
+Honduras 🇭🇳
+
+═══════════════════════════════════════════════════════════
