@@ -445,25 +445,424 @@ body {
 }
 
 /* RESPONSIVE */
-@media (max-width: 768px) {
+
+/* Botón hamburguesa para móvil */
+.menu-toggle {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 10001;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.menu-toggle:hover {
+    background: #e63946;
+}
+
+/* Overlay oscuro para móvil */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* Tablet (hasta 1024px) */
+@media (max-width: 1024px) {
     .sidebar {
+        width: 250px;
+    }
+    
+    .main-content {
+        margin-left: 250px;
+    }
+    
+    .page-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Móvil (hasta 768px) */
+@media (max-width: 768px) {
+    /* Mostrar botón hamburguesa */
+    .menu-toggle {
+        display: block;
+    }
+    
+    /* Sidebar como menú lateral */
+    .sidebar {
+        position: fixed;
         transform: translateX(-100%);
-        transition: transform 0.3s;
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        width: 280px;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.3);
     }
     
     .sidebar.open {
         transform: translateX(0);
     }
     
+    /* Contenido principal sin margen */
     .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        padding-top: 4rem; /* Espacio para botón hamburguesa */
+    }
+    
+    .main-content.full-width {
         margin-left: 0;
     }
     
+    /* Headers más pequeños */
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .subtitle {
+        font-size: 0.85rem;
+    }
+    
+    /* Métricas en columna */
     .metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .metric-card {
+        padding: 1rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+    }
+    
+    /* Forms responsive */
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    /* Tablas scrolleables */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table {
+        min-width: 600px;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Tabs */
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+    
+    .tab-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Botones más pequeños */
+    .btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .btn-sm {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Cards */
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Modal responsive */
+    .modal-content {
+        width: 95%;
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    /* Login page */
+    .login-container {
+        padding: 1rem;
+    }
+    
+    .login-box {
+        padding: 1.5rem;
+    }
+    
+    /* Formularios de productos/ingredientes */
+    .producto-item,
+    .ingrediente-item {
+        padding: 0.75rem;
+    }
+    
+    .producto-item .form-row,
+    .ingrediente-item .form-row {
         grid-template-columns: 1fr;
     }
     
-    .form-row {
-        grid-template-columns: 1fr;
+    /* Ajustes específicos de vistas */
+    .welcome-message {
+        padding: 2rem 1rem;
+    }
+}
+
+/* Móvil pequeño (hasta 480px) */
+@media (max-width: 480px) {
+    .main-content {
+        padding: 0.75rem;
+        padding-top: 3.5rem;
+    }
+    
+    .page-header {
+        margin-bottom: 1rem;
+    }
+    
+    .page-header h1 {
+        font-size: 1.25rem;
+    }
+    
+    .metric-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .metric-icon {
+        font-size: 2rem;
+    }
+    
+    .metric-value {
+        font-size: 1.25rem;
+    }
+    
+    /* Sidebar más compacto */
+    .sidebar {
+        width: 260px;
+    }
+    
+    .sidebar-header {
+        padding: 1.5rem 1rem;
+    }
+    
+    .sidebar-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .nav-link {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Tablas muy compactas */
+    .table {
+        min-width: 500px;
+        font-size: 0.75rem;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.35rem;
+    }
+    
+    /* Formularios */
+    .form-group label {
+        font-size: 0.85rem;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Botones de acción */
+    .btn-block {
+        padding: 0.75rem;
+    }
+}
+
+/* Landscape en móvil */
+@media (max-width: 768px) and (orientation: landscape) {
+    .main-content {
+        padding-top: 3rem;
+    }
+    
+    .sidebar {
+        width: 240px;
+    }
+    
+    .page-header h1 {
+        font-size: 1.25rem;
+    }
+}
+
+/* Tablets en landscape */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .metrics-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Clases auxiliares responsive */
+.hide-mobile {
+    display: block;
+}
+
+.show-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .hide-mobile {
+        display: none;
+    }
+    
+    .show-mobile {
+        display: block;
+    }
+}
+
+/* Mejoras de touch para móvil */
+@media (hover: none) and (pointer: coarse) {
+    .btn,
+    .nav-link,
+    .tab-btn {
+        min-height: 44px; /* Tamaño mínimo recomendado para touch */
+    }
+    
+    .table td,
+    .table th {
+        min-height: 40px;
+    }
+}
+
+/* Estilos adicionales para tablas responsive */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+}
+
+.table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--light);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* Mejorar touch targets en móvil */
+@media (max-width: 768px) {
+    input[type="checkbox"],
+    input[type="radio"] {
+        min-width: 20px;
+        min-height: 20px;
+    }
+    
+    select {
+        min-height: 44px;
+    }
+    
+    /* Alertas más compactas en móvil */
+    .alert {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Cards más compactos */
+    .card-header h2,
+    .card-header h3 {
+        font-size: 1rem;
+    }
+    
+    /* Badges más pequeños */
+    .badge {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Optimización para pantallas pequeñas en landscape */
+@media (max-height: 500px) and (orientation: landscape) {
+    .sidebar-header {
+        padding: 1rem;
+    }
+    
+    .nav-link {
+        padding: 0.5rem 1rem;
+    }
+    
+    .metric-card {
+        padding: 0.75rem;
+    }
+}
+
+/* Print styles - ocultar elementos innecesarios */
+@media print {
+    .sidebar,
+    .menu-toggle,
+    .sidebar-overlay,
+    .btn,
+    .tabs {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .table {
+        font-size: 10pt;
     }
 }

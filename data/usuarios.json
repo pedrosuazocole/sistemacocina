@@ -7,8 +7,6 @@
     "rol": "admin",
     "activo": true,
     "intentosFallidos": 0,
-    "createdAt": "2026-04-19T17:16:59.886Z",
-    "bloqueadoHasta": null,
-    "ultimoAcceso": "2026-04-19T18:05:08.635Z"
+    "createdAt": "2026-04-19T17:16:59.886Z"
   }
 ]

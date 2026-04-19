@@ -30,7 +30,9 @@ const FILES = {
     historial: path.join(DATA_DIR, 'historial.json'),
     recetas: path.join(DATA_DIR, 'recetas.json'),
     produccion: path.join(DATA_DIR, 'produccion.json'),
-    auditoria: path.join(DATA_DIR, 'auditoria.json')
+    auditoria: path.join(DATA_DIR, 'auditoria.json'),
+    productoTerminado: path.join(DATA_DIR, 'producto-terminado.json'),
+    movimientosProducto: path.join(DATA_DIR, 'movimientos-producto.json')
 };
 
 // ==================================================
@@ -103,7 +105,7 @@ function inicializarDatos() {
     }
 
     // Otros archivos vacíos
-    ['historial', 'recetas', 'produccion', 'auditoria'].forEach(key => {
+    ['historial', 'recetas', 'produccion', 'auditoria', 'productoTerminado', 'movimientosProducto'].forEach(key => {
         if (!fs.existsSync(FILES[key])) {
             guardarDatos(FILES[key], []);
         }
@@ -492,6 +494,43 @@ app.post('/produccion/procesar', requireAuth, (req, res) => {
     
     guardarDatos(FILES.produccion, produccion);
     
+    // NUEVO: Agregar automáticamente al inventario de producto terminado
+    const productoTerminado = leerDatos(FILES.productoTerminado);
+    let producto = productoTerminado.find(p => p.plato === plato);
+    
+    if (!producto) {
+        producto = {
+            id: generarId(),
+            plato,
+            cantidad: 0,
+            costoUnitario: receta.costoTotalPlato,
+            precioVenta: receta.precioVenta,
+            createdAt: new Date().toISOString()
+        };
+        productoTerminado.push(producto);
+    }
+    
+    const stockAnterior = producto.cantidad;
+    producto.cantidad += parseInt(cantidad);
+    producto.updatedAt = new Date().toISOString();
+    
+    guardarDatos(FILES.productoTerminado, productoTerminado);
+    
+    // Registrar movimiento de producto terminado
+    const movimientos = leerDatos(FILES.movimientosProducto);
+    movimientos.push({
+        id: generarId(),
+        plato,
+        tipo: 'ENTRADA',
+        cantidad: parseInt(cantidad),
+        origen: `Producción ${idOperacion}`,
+        fecha: new Date().toISOString(),
+        usuarioId: req.session.userId,
+        stockAnterior,
+        stockNuevo: producto.cantidad
+    });
+    guardarDatos(FILES.movimientosProducto, movimientos);
+    
     res.json({ success: true, idOperacion });
 });
 
@@ -553,6 +592,197 @@ app.get('/reportes', requireAuth, (req, res) => {
         recetas,
         produccion
     });
+});
+
+// ==================================================
+// RUTAS DE INVENTARIO DE PRODUCTO TERMINADO
+// ==================================================
+app.get('/producto-terminado', requireAuth, (req, res) => {
+    const productoTerminado = leerDatos(FILES.productoTerminado);
+    const recetas = leerDatos(FILES.recetas);
+    const movimientos = leerDatos(FILES.movimientosProducto);
+    
+    res.render('producto-terminado', { 
+        productoTerminado, 
+        recetas,
+        movimientos 
+    });
+});
+
+app.post('/producto-terminado/agregar', requireAuth, (req, res) => {
+    const { plato, cantidad, origen } = req.body;
+    
+    if (!plato || !cantidad) {
+        return res.status(400).json({ error: 'Datos incompletos' });
+    }
+    
+    const productoTerminado = leerDatos(FILES.productoTerminado);
+    const recetas = leerDatos(FILES.recetas);
+    
+    // Buscar o crear entrada de producto terminado
+    let producto = productoTerminado.find(p => p.plato === plato);
+    const receta = recetas.find(r => r.plato === plato);
+    
+    if (!receta) {
+        return res.status(404).json({ error: 'Receta no encontrada' });
+    }
+    
+    if (!producto) {
+        // Crear nueva entrada
+        producto = {
+            id: generarId(),
+            plato,
+            cantidad: 0,
+            costoUnitario: receta.costoTotalPlato,
+            precioVenta: receta.precioVenta,
+            createdAt: new Date().toISOString()
+        };
+        productoTerminado.push(producto);
+    }
+    
+    // Agregar cantidad
+    const cantidadNum = parseInt(cantidad);
+    producto.cantidad += cantidadNum;
+    producto.updatedAt = new Date().toISOString();
+    
+    guardarDatos(FILES.productoTerminado, productoTerminado);
+    
+    // Registrar movimiento
+    const movimientos = leerDatos(FILES.movimientosProducto);
+    movimientos.push({
+        id: generarId(),
+        plato,
+        tipo: 'ENTRADA',
+        cantidad: cantidadNum,
+        origen: origen || 'Producción',
+        fecha: new Date().toISOString(),
+        usuarioId: req.session.userId,
+        stockAnterior: producto.cantidad - cantidadNum,
+        stockNuevo: producto.cantidad
+    });
+    guardarDatos(FILES.movimientosProducto, movimientos);
+    
+    // Auditoría
+    const auditoria = leerDatos(FILES.auditoria);
+    auditoria.push({
+        id: generarId(),
+        usuarioId: req.session.userId,
+        accion: 'ENTRADA_PRODUCTO_TERMINADO',
+        detalles: `Entrada: ${cantidadNum} ${plato}`,
+        timestamp: new Date().toISOString(),
+        ip: req.ip
+    });
+    guardarDatos(FILES.auditoria, auditoria);
+    
+    res.json({ success: true });
+});
+
+app.post('/producto-terminado/salida', requireAuth, (req, res) => {
+    const { plato, cantidad, motivo } = req.body;
+    
+    if (!plato || !cantidad) {
+        return res.status(400).json({ error: 'Datos incompletos' });
+    }
+    
+    const productoTerminado = leerDatos(FILES.productoTerminado);
+    const producto = productoTerminado.find(p => p.plato === plato);
+    
+    if (!producto) {
+        return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    
+    const cantidadNum = parseInt(cantidad);
+    
+    if (producto.cantidad < cantidadNum) {
+        return res.status(400).json({ error: 'Stock insuficiente' });
+    }
+    
+    // Descontar cantidad
+    const stockAnterior = producto.cantidad;
+    producto.cantidad -= cantidadNum;
+    producto.updatedAt = new Date().toISOString();
+    
+    guardarDatos(FILES.productoTerminado, productoTerminado);
+    
+    // Registrar movimiento
+    const movimientos = leerDatos(FILES.movimientosProducto);
+    movimientos.push({
+        id: generarId(),
+        plato,
+        tipo: 'SALIDA',
+        cantidad: cantidadNum,
+        motivo: motivo || 'Venta',
+        fecha: new Date().toISOString(),
+        usuarioId: req.session.userId,
+        stockAnterior,
+        stockNuevo: producto.cantidad
+    });
+    guardarDatos(FILES.movimientosProducto, movimientos);
+    
+    // Auditoría
+    const auditoria = leerDatos(FILES.auditoria);
+    auditoria.push({
+        id: generarId(),
+        usuarioId: req.session.userId,
+        accion: 'SALIDA_PRODUCTO_TERMINADO',
+        detalles: `Salida: ${cantidadNum} ${plato} - ${motivo}`,
+        timestamp: new Date().toISOString(),
+        ip: req.ip
+    });
+    guardarDatos(FILES.auditoria, auditoria);
+    
+    res.json({ success: true });
+});
+
+app.post('/producto-terminado/ajuste', requireAuth, (req, res) => {
+    const user = leerDatos(FILES.usuarios).find(u => u.id === req.session.userId);
+    if (user.rol !== 'admin') {
+        return res.status(403).json({ error: 'Solo administradores pueden hacer ajustes' });
+    }
+    
+    const { plato, cantidadNueva, motivo } = req.body;
+    
+    const productoTerminado = leerDatos(FILES.productoTerminado);
+    const producto = productoTerminado.find(p => p.plato === plato);
+    
+    if (!producto) {
+        return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    
+    const stockAnterior = producto.cantidad;
+    producto.cantidad = parseInt(cantidadNueva);
+    producto.updatedAt = new Date().toISOString();
+    
+    guardarDatos(FILES.productoTerminado, productoTerminado);
+    
+    // Registrar movimiento
+    const movimientos = leerDatos(FILES.movimientosProducto);
+    movimientos.push({
+        id: generarId(),
+        plato,
+        tipo: 'AJUSTE',
+        cantidad: Math.abs(producto.cantidad - stockAnterior),
+        motivo: motivo || 'Ajuste de inventario',
+        fecha: new Date().toISOString(),
+        usuarioId: req.session.userId,
+        stockAnterior,
+        stockNuevo: producto.cantidad
+    });
+    guardarDatos(FILES.movimientosProducto, movimientos);
+    
+    // Auditoría
+    const auditoria = leerDatos(FILES.auditoria);
+    auditoria.push({
+        id: generarId(),
+        usuarioId: req.session.userId,
+        accion: 'AJUSTE_PRODUCTO_TERMINADO',
+        detalles: `Ajuste: ${plato} de ${stockAnterior} a ${producto.cantidad}`,
+        timestamp: new Date().toISOString(),
+        ip: req.ip
+    });
+    guardarDatos(FILES.auditoria, auditoria);
+    
+    res.json({ success: true });
 });
 
 // ==================================================
